@@ -8,7 +8,7 @@
 	max-width: 1000px;
 	margin: auto;
 	background-color: #eeeeee;
-	min-height: 1500px;
+	//min-height: 1500px;
 	padding:0;
 }
 
@@ -114,6 +114,9 @@ nav .active {
         width: 50%;
         float: left;
     }
+    .onecol {
+        padding-left: 15px;
+    }
 }
 
 .body {
@@ -121,4 +124,23 @@ nav .active {
 	width: 100%;
 	margin-top: 36px;
 	background-color: #cccccc;
+}
+
+.left-split {
+    text-align: center;
+}
+.right-split {
+    text-align: center;
+}
+
+.mepic {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 200px;
+}
+
+.footer {
+    width: 100%;
+    text-align: center;
 }
