@@ -7,7 +7,7 @@
 	width: 100%;
 	max-width: 1000px;
 	margin: auto;
-	background-color: #eeeeee;
+	//background-color: #8c8c94;
 	//min-height: 1500px;
 	padding:0;
 }
@@ -15,20 +15,21 @@
 .header {
 	width: inherit;
 	max-width: inherit;
-	height: 36px;
+	height: 50px;
 	position: fixed;
 	top:0;
-	background-color: #dddddd;
+	//background-color: #d3c0c6;
 }
 .name {
 	padding-left: 25px;
-	line-height: 36px;
+	line-height: 50px;
 	vertical-align: middle;
+    font-size: 36px;
 }
 /* screen and max-width: 500 */
 nav {
 	position: fixed;
-	top:0;
+	top:50px;
 	right:0;
 	height: 100%;
 	display: none;
@@ -45,14 +46,22 @@ nav li {
 	vertical-align: middle;
 }
 nav .active {
-    background-color: #fff;
+    //background-color: #9999ae;
+}
+nav a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding-left: 5px;
 }
 .topmenu {
-	background-color: #cccccc;
+	//background-color: #6a6a7a;
 	float:right;
 }
 .submenu {
-	background-color: #bbbbbb;
+	//background-color: #5b5b70;
 	float:right;
 }
 .toggle-container {
@@ -60,8 +69,9 @@ nav .active {
 	top:0;
 	right:0;
 	padding-right: 25px;
+    padding-top: 9px;
 	height: inherit;
-	width: 25px;
+	width: 48px;
 	align:center;
 }
 #toggle {
@@ -71,7 +81,7 @@ nav .active {
 	display: block;
 }
 #toggle:checked ~ .toggle-container {
-	padding-right: 210px;
+	//padding-right: 210px;
 }
 @media screen and (min-width: 500px) {
 	nav {
@@ -81,25 +91,22 @@ nav .active {
 		height:auto;
 		display: block;
 
-		padding-right: 25px;
+		//padding-right: 25px;
 	}
 	nav ul {
 		list-style-type: none;
-		height:auto;
+		height:25px;
 	}
 	nav li {
 		display: inline-block;
 		width: 85px;
-		height:auto;
-		line-height:normal;
-		vertical-align: baseline;
+		height:25px;
+		line-height:25px;
 	}
 	.topmenu {
-		background-color: inherit;
 		float:none;
 	}
 	.submenu {
-		background-color: inherit;
 		float:none;
 	}
 	.toggle-container {
@@ -122,8 +129,9 @@ nav .active {
 .body {
     overflow: auto;
 	width: 100%;
-	margin-top: 36px;
-	background-color: #cccccc;
+	margin-top: 50px;
+    padding: 5px;
+	//background-color: #cccccc;
 }
 
 .left-split {
@@ -142,5 +150,7 @@ nav .active {
 
 .footer {
     width: 100%;
+	max-width: 1000px;
     text-align: center;
+    margin: auto;
 }
