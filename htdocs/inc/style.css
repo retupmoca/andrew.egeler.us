@@ -2,6 +2,7 @@
 	margin:0;
 	padding:0;
 	box-sizing: border-box;
+    font-family: Helvetica, Arial, sans-serif;
 }
 .inner {
 	width: 100%;
@@ -26,6 +27,7 @@
 	line-height: 50px;
 	vertical-align: middle;
     font-size: 36px;
+    font-weight: bold;
     //display: inline-block;
 }
 /* screen and max-width: 500 */
