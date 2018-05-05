@@ -19,12 +19,14 @@
 	position: fixed;
 	top:0;
 	//background-color: #d3c0c6;
+    box-shadow: 0px 3px 3px 0px rgba(0, 0, 0, .5);
 }
 .name {
 	padding-left: 25px;
 	line-height: 50px;
 	vertical-align: middle;
     font-size: 36px;
+    //display: inline-block;
 }
 /* screen and max-width: 500 */
 nav {
@@ -57,12 +59,18 @@ nav a {
     padding-left: 5px;
 }
 .topmenu {
+    position:relative;
+    z-index:1;
 	//background-color: #6a6a7a;
 	float:right;
+    box-shadow: -3px 0px 3px 0px rgba(0, 0, 0, .5);
 }
 .submenu {
+    position:relative;
+    z-index:0;
 	//background-color: #5b5b70;
 	float:right;
+    box-shadow: -3px 0px 3px 0px rgba(0, 0, 0, .5);
 }
 .toggle-container {
 	position:absolute;
@@ -74,6 +82,11 @@ nav a {
 	width: 48px;
 	align:center;
 }
+.button-toggle {
+    position: absolute;
+    top:9px;
+    right:9px;
+}
 #toggle {
 	display:none;
 }
@@ -82,18 +95,35 @@ nav a {
 }
 #toggle:checked ~ .toggle-container {
 	//padding-right: 210px;
+	position: fixed;
+    height: 100%;
+    width: 100%;
 }
 @media screen and (min-width: 500px) {
+    .header {
+        box-shadow: none;
+    }
+    .name {
+        box-shadow: 3px 3px 3px 0px rgba(0, 0, 0, .5);
+        overflow: hidden;
+    }
 	nav {
-		position: absolute;
+		//position: absolute;
 		top:0;
-		right:0;
+		//right:0;
+        right:auto;
 		height:auto;
 		display: block;
+        float: right;
+        position: relative;
 
 		//padding-right: 25px;
+
+        box-shadow: none;
 	}
 	nav ul {
+        padding-left: 10px;
+        padding-right: 10px;
 		list-style-type: none;
 		height:25px;
 	}
@@ -105,9 +135,21 @@ nav a {
 	}
 	.topmenu {
 		float:none;
+        //box-shadow: -1px 3px 3px 0px rgba(0, 0, 0, .5);
+        box-shadow: none;
 	}
 	.submenu {
 		float:none;
+        box-shadow: 3px 3px 3px 0px rgba(0, 0, 0, .5) inset;
+        //box-shadow: none;
+        //height: 30px
+	}
+	.submenu li {
+        //height: 30px;
+    }
+	.submenu .active {
+        box-shadow: 0px 3px 3px 0px rgba(0, 0, 0, .5) inset;
+        //box-shadow: none;
 	}
 	.toggle-container {
 		display:none;
