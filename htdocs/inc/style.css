@@ -1,3 +1,24 @@
+// http://paletton.com/#uid=13F0u0kfsyx00+N3YR+pYrDzfiO
+body             { background-color: #fefefe; }
+.body            { background-color: #cdd7e7;
+                              color: #000; }
+.header          { background-color: #6281af;
+                              color: #fefefe; }
+.topmenu         { background-color: #082d63;
+                              color: #cdd7e7; }
+.topmenu .active { background-color: #265191;
+                              color: #cdd7e7; }
+.submenu         { background-color: #265191;
+                              color: #cdd7e7; }
+.submenu .active { background-color: #cdd7e7;
+                              color: #000; }
+nav li :hover    { background-color: #fefefe;
+                              color: #000; }
+nav li .blank :hover    { background-color: initial;
+                              color: initial; }
+.footer          { background-color: #6281af;
+                              color: #cdd7e7; }
+
 *{
 	margin:0;
 	padding:0;
