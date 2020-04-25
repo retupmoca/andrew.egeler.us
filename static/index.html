@@ -14,8 +14,8 @@
     <div class="body">
         <div class="onecol">
             <div class="navlink">
-                <a href="/post/{{prev}}" {% if not prev %}style="visibility: hidden;"{% endif %}>&lt;&lt; Older</a>
-                <a href="/post/{{next}}" {% if not next %}style="visibility: hidden;"{% endif %}>Newer &gt;&gt;</a>
+                <a href="/post/{{prev_link}}" {{#hprev}}style="visibility: hidden;"{{/hprev}}>&lt;&lt; Older</a>
+                <a href="/post/{{next_link}}" {{#hnext}}style="visibility: hidden;"{{/hnext}}>Newer &gt;&gt;</a>
             </div>
             {{post}}
         </div>

@@ -3,14 +3,13 @@
 #include <memory>
 #include <map>
 
-#include <simple-web-server/server_http.hpp>
-#include <jinja2cpp/template.h>
-#include <jinja2cpp/template_env.h>
+#include <restinio/all.hpp>
+#include <ctemplate/template.h>
 
 #include <cmark.h>
 #include <glob.h>
 
-using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
+using router_t = restinio::router::express_router_t<>;
 using std::shared_ptr;
 
 extern "C" {
@@ -72,64 +71,87 @@ int main() {
 
     globfree(&globbuf);
 
-    // http stuff
-    HttpServer server;
-    server.config.port = 8080;
+    ctemplate::StringToTemplateCache("layout.html", template_layout, template_layout_size, ctemplate::DO_NOT_STRIP);
+    ctemplate::StringToTemplateCache("index.html", template_index, template_index_size, ctemplate::DO_NOT_STRIP);
 
-    jinja2::TemplateEnv env;
+    auto router = std::make_unique<router_t>();
 
-    jinja2::Settings settings;
-    settings.autoReload = false;
-    env.SetSettings(settings);
-
-    auto fs = std::make_shared<jinja2::MemoryFileSystem>();
-    fs->AddFile("layout.html", std::string(template_layout, template_layout_size));
-    fs->AddFile("index.html", std::string(template_index, template_index_size));
-    env.AddFilesystemHandler(std::string(), fs);
-
-    server.resource["^/post/(.*)$"]["GET"] = [&env](shared_ptr<HttpServer::Response> response, [[maybe_unused]] shared_ptr<HttpServer::Request> request) {
-        //response->write(post_data.at("posts/foo.md"));
+    router->http_get("/post/:pid", [](auto req, auto params){
         try {
-            auto tpl = env.LoadTemplate("index.html").value();
-            auto name = request->path_match[1].str();
-            auto output = tpl.RenderAsString({
-                {"post", std::string(post_data.at(name))},
-                {"next", next_links.at(name)},
-                {"prev", prev_links.at(name)},
-            });
-            response->write(output.value(), {{"Content-Type", "text/html"}});
+            auto name = restinio::cast_to<std::string>(params["pid"]);
+
+            ctemplate::TemplateDictionary dict("");
+            dict.SetValue("post", std::string(post_data.at(name)));
+            auto &n = next_links.at(name);
+            auto &p = prev_links.at(name);
+            dict.SetValue("next_link", n);
+            if (!n.size())
+                dict.ShowSection("hnext");
+            dict.SetValue("prev_link", p);
+            if (!p.size())
+                dict.ShowSection("hprev");
+            std::string output;
+            ctemplate::ExpandTemplate("index.html", ctemplate::DO_NOT_STRIP, &dict, &output);
+
+            req->create_response()
+                .append_header(restinio::http_field::content_type, "text/html")
+                .set_body(output)
+                .done();
         }
         catch (const std::out_of_range& oor) {
-            response->write(SimpleWeb::StatusCode::client_error_not_found, "Not Found");
+            req->create_response( restinio::status_not_found() ).done();
+        }
+        catch(std::exception const & ex) {
+            std::cout << ex.what() << std::endl;
         }
         catch(...) {
             std::cout << "ERR" << std::endl;
-            response->write("ERR");
+            req->create_response( restinio::status_internal_server_error() ).done();
         }
-    };
+        
+        return restinio::request_accepted();
+    });
 
-    server.resource["^/favicon.ico$"]["GET"] = [](shared_ptr<HttpServer::Response> response, [[maybe_unused]] shared_ptr<HttpServer::Request> request) {
-        response->write(std::string_view(static_favicon, static_favicon_size), {{"Content-Type", "image/x-icon"}});
-    };
-    server.resource["^/style.css$"]["GET"] = [](shared_ptr<HttpServer::Response> response, [[maybe_unused]] shared_ptr<HttpServer::Request> request) {
-        response->write(std::string_view(static_style, static_style_size), {{"Content-Type", "text/css"}});
-    };
+    router->http_get("/favicon.ico", [](auto req, [[maybe_unused]] auto params){
+        req->create_response()
+            .append_header(restinio::http_field::content_type, "image/x-icon")
+            .set_body(std::string_view(static_favicon, static_favicon_size))
+            .done();
 
-    server.resource["^/$"]["GET"] = [&home_redirect](shared_ptr<HttpServer::Response> response, [[maybe_unused]] shared_ptr<HttpServer::Request> request) {
+        return restinio::request_accepted();
+    });
+
+    router->http_get("/style.css", [](auto req, [[maybe_unused]] auto params){
+        req->create_response()
+            .append_header(restinio::http_field::content_type, "text/css")
+            .set_body(std::string_view(static_style, static_style_size))
+            .done();
+        return restinio::request_accepted();
+    });
+
+    router->http_get("/", [&home_redirect](auto req, [[maybe_unused]] auto params){
         try {
-            response->write(SimpleWeb::StatusCode::redirection_found, {{"Location", home_redirect}});
+            req->create_response(restinio::status_found())
+                .append_header(restinio::http_field::location, home_redirect)
+                .done();
         }
         catch (const std::out_of_range& oor) {
-            response->write(SimpleWeb::StatusCode::client_error_not_found, "Not Found");
+            req->create_response( restinio::status_not_found() ).done();
         }
         catch(...) {
             std::cout << "ERR" << std::endl;
-            response->write("ERR");
+            req->create_response( restinio::status_internal_server_error() ).done();
         }
-    };
+        return restinio::request_accepted();
+    });
 
+    using traits_t =
+      restinio::traits_t<
+         restinio::asio_timer_manager_t,
+         restinio::single_threaded_ostream_logger_t,
+         router_t >;
     std::cout << "Starting server." << std::endl;
-    server.start();
+    restinio::run(restinio::on_this_thread<traits_t>().port(8080).request_handler(std::move(router)));
 
     return 0;
 }

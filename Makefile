@@ -1,7 +1,7 @@
 .PHONY: build
 build:
 	mkdir -p bin
-	g++ -O2 -s -Wall -Wextra -Werror -obin/site -std=c++2a src/main.cpp -ljinja2cpp -lpthread -lboost_filesystem -lcmark static/static.s
+	g++ -g -Wall -Wextra -Werror -obin/site -std=c++2a src/main.cpp -pthread -lcmark -lhttp_parser -lfmt -lctemplate static/static.s
 
 .PHONY: clean
 clean:
