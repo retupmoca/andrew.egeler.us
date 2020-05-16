@@ -13,9 +13,8 @@ RUN emerge dev-util/cmake dev-libs/boost
 ##
 FROM cpp-src-build-core AS cpp-webdev-build
 
-RUN echo 'dev-libs/simple-web-server' >>/etc/portage/package.keywords
-RUN echo 'dev-libs/jinja2cpp' >>/etc/portage/package.keywords
-RUN emerge dev-libs/simple-web-server dev-libs/jinja2cpp app-text/cmark
+RUN echo 'dev-libs/restinio' >>/etc/portage/package.keywords
+RUN emerge dev-libs/restinio dev-cpp/ctemplate app-text/cmark
 
 ##
 FROM cpp-webdev-build AS site-build
@@ -28,15 +27,16 @@ FROM scratch AS site-deploy
 
 WORKDIR /
 
-COPY --from=site-build /lib64/libpthread.so.0 /lib64/
-COPY --from=site-build /usr/lib64/libboost_filesystem.so.1.72.0 /lib64/
 COPY --from=site-build /usr/lib64/libcmark.so.0.29.0 /lib64/
-COPY --from=site-build /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/libstdc++.so.6 /lib64/
+COPY --from=site-build /usr/lib64/libhttp_parser.so.2.9 /lib64/
+COPY --from=site-build /usr/lib64/libfmt.so.6 /lib64/
+COPY --from=site-build /usr/lib64/libctemplate.so.3 /lib64/
+COPY --from=site-build /usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0/libstdc++.so.6 /lib64/
 COPY --from=site-build /lib64/libm.so.6 /lib64/
-COPY --from=site-build /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/libgcc_s.so.1 /lib64/
+COPY --from=site-build /usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0/libgcc_s.so.1 /lib64/
+COPY --from=site-build /lib64/libpthread.so.0 /lib64/
 COPY --from=site-build /lib64/libc.so.6 /lib64/
 COPY --from=site-build /lib64/ld-linux-x86-64.so.2 /lib64/
-COPY --from=site-build /lib64/librt.so.1 /lib64/
 
 COPY --from=site-build /build/bin/site /bin/
 
