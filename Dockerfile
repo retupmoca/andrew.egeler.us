@@ -8,7 +8,8 @@ RUN eselect repository add localrepo git https://github.com/retupmoca/gentoo-ove
 RUN emaint sync -r localrepo
 
 # common dependencies
-RUN emerge dev-util/cmake dev-libs/boost
+RUN echo 'dev-util/ldd-dep-cp' >>/etc/portage/package.keywords
+RUN emerge dev-util/cmake dev-libs/boost dev-util/ldd-dep-cp
 
 ##
 FROM cpp-src-build-core AS cpp-webdev-build
@@ -22,23 +23,16 @@ FROM cpp-webdev-build AS site-build
 WORKDIR /build
 COPY . .
 RUN make
+RUN mkdir -p /dist/lib64
+RUN mkdir -p /dist/bin
+RUN cp bin/site /dist/bin
+RUN ldd-dep-cp bin/site /dist/lib64
 
 FROM scratch AS site-deploy
 
 WORKDIR /
 
-COPY --from=site-build /usr/lib64/libcmark.so.0.29.0 /lib64/
-COPY --from=site-build /usr/lib64/libhttp_parser.so.2.9 /lib64/
-COPY --from=site-build /usr/lib64/libfmt.so.6 /lib64/
-COPY --from=site-build /usr/lib64/libctemplate.so.3 /lib64/
-COPY --from=site-build /usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0/libstdc++.so.6 /lib64/
-COPY --from=site-build /lib64/libm.so.6 /lib64/
-COPY --from=site-build /usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0/libgcc_s.so.1 /lib64/
-COPY --from=site-build /lib64/libpthread.so.0 /lib64/
-COPY --from=site-build /lib64/libc.so.6 /lib64/
-COPY --from=site-build /lib64/ld-linux-x86-64.so.2 /lib64/
-
-COPY --from=site-build /build/bin/site /bin/
+COPY --from=site-build /dist/ /
 
 VOLUME /post
 
