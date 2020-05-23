@@ -13,17 +13,17 @@ using router_t = restinio::router::express_router_t<>;
 using std::shared_ptr;
 
 extern "C" {
-    extern char template_layout[];
-    extern unsigned template_layout_size;
+    extern char const template_layout[];
+    extern unsigned const template_layout_size;
 
-    extern char template_index[];
-    extern unsigned template_index_size;
+    extern char const template_index[];
+    extern unsigned const template_index_size;
 
-    extern char static_style[];
-    extern unsigned static_style_size;
+    extern char const static_style[];
+    extern unsigned const static_style_size;
 
-    extern char static_favicon[];
-    extern unsigned static_favicon_size;
+    extern char const static_favicon[];
+    extern unsigned const static_favicon_size;
 }
 
 std::map<std::string, char*> post_data;
