@@ -6,6 +6,7 @@
 #include <glob.h>
 
 #include "blog.hpp"
+#include "util.hpp"
 
 namespace blog {
     using std::vector;
@@ -17,31 +18,12 @@ namespace blog {
         string prev = "";
         string next = "";
     };
-
-    struct PostLoaded {
-        string name;
-        string htmlBody;
-        string prev;
-        string next;
-    };
-
-    struct PostRendered {
-        string name;
-        string html;
-    };
-
     auto findPostFiles(string basePath) -> vector<PostFile> {
-        // TODO: possible leak, because C
-
+        vector<string> files = util::glob(basePath);
         vector<PostFile> posts;
-
         string last;
 
-        glob_t globbuf;
-        glob(basePath.c_str(), 0, nullptr, &globbuf);
-        for(size_t i=0; i < globbuf.gl_pathc; i++) {
-            // we assume that glob pulls files in lexographic order
-            string filename(globbuf.gl_pathv[i]);
+        for(auto &filename : files) {
             string name = filename.substr(5, filename.size() - 8); // TODO: magic numbers, fragile
 
             posts.push_back({.name=name, .filename=filename});
@@ -52,46 +34,45 @@ namespace blog {
             }
             last = name;
         }
-        globfree(&globbuf);
 
         return posts;
     }
 
+    // TODO: probably want to make this an object to support runtime-updating
+    //       of blog post list
     auto makePosts(string basePath) -> PostMap {
+        //TODO: I want c++20 ranges for this
+
         // glob the files
         auto postFiles = findPostFiles(basePath);
 
-        // render the markdown to HTML
-        vector<PostLoaded> postPieces;
-        std::transform(postFiles.begin(), postFiles.end(), std::back_inserter(postPieces),
-            [](PostFile p) -> PostLoaded {
-                // TODO: this should be a bit more C++ - fstream instead of FILE*
-                //       at the very least
-                cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
-                FILE *fp = fopen(p.filename.c_str(), "rb");
-                size_t bytes;
-                char buffer[8192];
-                while ((bytes = fread(buffer, 1, sizeof(buffer), fp)) > 0) {
-                    cmark_parser_feed(parser, buffer, bytes);
-                    if (bytes < sizeof(buffer)) {
-                        break;
-                    }
-                }
-                char *document = cmark_render_html(cmark_parser_finish(parser), 0);
-                string html(document);
-                free(document);
-                cmark_parser_free(parser);
-
-                return {.name=p.name, .htmlBody=html, .prev=p.prev, .next=p.next};
+        // load the markdown
+        struct PostMd {
+            string name;
+            string markdown;
+            string prev;
+            string next;
+        };
+        vector<PostMd> postMarkdown;
+        std::transform(postFiles.begin(), postFiles.end(), std::back_inserter(postMarkdown),
+            [](PostFile p) -> PostMd {
+                return {.name=p.name, .markdown=util::slurp(p.filename), .prev=p.prev, .next=p.next};
             }
         );
 
+        // TODO: generate RSS data from markdown text
+
         // dump it into HTML templates
+        struct PostRendered {
+            string name;
+            string html;
+        };
         vector<PostRendered> postRendered;
-        std::transform(postPieces.begin(), postPieces.end(), std::back_inserter(postRendered),
-            [](PostLoaded p) -> PostRendered {
+        std::transform(postMarkdown.begin(), postMarkdown.end(), std::back_inserter(postRendered),
+            [](PostMd p) -> PostRendered {
+                // TODO: I don't really like ctemplate's API here
                 ctemplate::TemplateDictionary dict("");
-                dict.SetValue("post", p.htmlBody);
+                dict.SetValue("post", util::mdToHtml(p.markdown));
                 dict.SetValue("next_link", p.next);
                 if (!p.next.size())
                     dict.ShowSection("hnext");
