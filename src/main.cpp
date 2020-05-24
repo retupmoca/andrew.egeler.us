@@ -10,7 +10,8 @@
 #include <glob.h>
 
 using router_t = restinio::router::express_router_t<>;
-using std::shared_ptr;
+using std::vector;
+using std::string;
 
 extern "C" {
     extern char const template_layout[];
@@ -26,76 +27,126 @@ extern "C" {
     extern unsigned const static_favicon_size;
 }
 
-std::map<std::string, char*> post_data;
-std::map<std::string, std::string> prev_links;
-std::map<std::string, std::string> next_links;
+struct PostFile {
+    string name;
+    string filename;
+    string prev = "";
+    string next = "";
+};
 
-int main() {
-    std::string last;
-    // load blog posts
+struct PostLoaded {
+    string name;
+    string htmlBody;
+    string prev;
+    string next;
+};
+
+struct PostRendered {
+    string name;
+    string html;
+};
+
+using PostMap = std::map<string, string>;
+
+auto findPostFiles(string basePath) -> vector<PostFile> {
+    // TODO: possible leak, because C
+
+    vector<PostFile> posts;
+
+    string last;
+
     glob_t globbuf;
-    glob("post/*.md", 0, nullptr, &globbuf);
+    glob(basePath.c_str(), 0, nullptr, &globbuf);
     for(size_t i=0; i < globbuf.gl_pathc; i++) {
-        std::cout << globbuf.gl_pathv[i] << std::endl;
+        // we assume that glob pulls files in lexographic order
+        string filename(globbuf.gl_pathv[i]);
+        string name = filename.substr(5, filename.size() - 8); // TODO: magic numbers, fragile
 
-        cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
-        FILE *fp = fopen(globbuf.gl_pathv[i], "rb");
-        size_t bytes;
-        char buffer[8192];
-        while ((bytes = fread(buffer, 1, sizeof(buffer), fp)) > 0) {
-            cmark_parser_feed(parser, buffer, bytes);
-            if (bytes < sizeof(buffer)) {
-                break;
-            }
-        }
-        char *document = cmark_render_html(cmark_parser_finish(parser), 0);
-        cmark_parser_free(parser);
+        posts.push_back({.name=name, .filename=filename});
 
-        auto name = std::string(globbuf.gl_pathv[i]);
-        name = name.substr(5, name.size() - 8);
-
-        prev_links.insert_or_assign(name, "");
-        next_links.insert_or_assign(name, "");
-
-        //std::cout << name.substr(5, name.size() - 8) << std::endl;
-        post_data.insert_or_assign(name, document);
-        //std::cout << document << std::endl;
         if (last.size()) {
-            prev_links.insert_or_assign(name, last);
-            next_links.insert_or_assign(last, name);
+            posts[posts.size() - 1].prev = last;
+            posts[posts.size() - 2].next = name;
         }
         last = name;
     }
-
-    std::string home_redirect = "/post/" + std::string(post_data.rbegin()->first);
-
     globfree(&globbuf);
 
-    ctemplate::StringToTemplateCache("layout.html", template_layout, template_layout_size, ctemplate::DO_NOT_STRIP);
-    ctemplate::StringToTemplateCache("index.html", template_index, template_index_size, ctemplate::DO_NOT_STRIP);
+    return posts;
+}
 
-    auto router = std::make_unique<router_t>();
+auto makePosts(string basePath) -> PostMap {
+    // glob the files
+    auto postFiles = findPostFiles(basePath);
 
-    router->http_get("/post/:pid", [](auto req, auto params){
-        try {
-            auto name = restinio::cast_to<std::string>(params["pid"]);
+    // render the markdown to HTML
+    vector<PostLoaded> postPieces;
+    std::transform(postFiles.begin(), postFiles.end(), std::back_inserter(postPieces),
+        [](PostFile p) -> PostLoaded {
+            // TODO: this should be a bit more C++ - fstream instead of FILE*
+            //       at the very least
+            cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
+            FILE *fp = fopen(p.filename.c_str(), "rb");
+            size_t bytes;
+            char buffer[8192];
+            while ((bytes = fread(buffer, 1, sizeof(buffer), fp)) > 0) {
+                cmark_parser_feed(parser, buffer, bytes);
+                if (bytes < sizeof(buffer)) {
+                    break;
+                }
+            }
+            char *document = cmark_render_html(cmark_parser_finish(parser), 0);
+            string html(document);
+            free(document);
+            cmark_parser_free(parser);
 
+            return {.name=p.name, .htmlBody=html, .prev=p.prev, .next=p.next};
+        }
+    );
+
+    // dump it into HTML templates
+    vector<PostRendered> postRendered;
+    std::transform(postPieces.begin(), postPieces.end(), std::back_inserter(postRendered),
+        [](PostLoaded p) -> PostRendered {
             ctemplate::TemplateDictionary dict("");
-            dict.SetValue("post", std::string(post_data.at(name)));
-            auto &n = next_links.at(name);
-            auto &p = prev_links.at(name);
-            dict.SetValue("next_link", n);
-            if (!n.size())
+            dict.SetValue("post", p.htmlBody);
+            dict.SetValue("next_link", p.next);
+            if (!p.next.size())
                 dict.ShowSection("hnext");
-            dict.SetValue("prev_link", p);
-            if (!p.size())
+            dict.SetValue("prev_link", p.prev);
+            if (!p.prev.size())
                 dict.ShowSection("hprev");
             std::string output;
             ctemplate::ExpandTemplate("index.html", ctemplate::DO_NOT_STRIP, &dict, &output);
 
+            return {.name=p.name, .html=output};
+        }
+    );
+
+    // index it
+    PostMap posts;
+    for(auto &p : postRendered)
+        posts[p.name] = p.html;
+    return posts;
+}
+
+int main() {
+    ctemplate::StringToTemplateCache("layout.html", template_layout, template_layout_size, ctemplate::DO_NOT_STRIP);
+    ctemplate::StringToTemplateCache("index.html", template_index, template_index_size, ctemplate::DO_NOT_STRIP);
+
+    PostMap posts = makePosts("post/*.md");
+    string home_redirect = "/post/" + posts.rbegin()->first;
+
+    auto router = std::make_unique<router_t>();
+
+    router->http_get("/post/:pid", [&posts](auto req, auto params){
+        try {
+            auto name = restinio::cast_to<std::string>(params["pid"]);
+            auto html = posts.at(name);
+
             req->create_response()
                 .append_header(restinio::http_field::content_type, "text/html")
-                .set_body(output)
+                .set_body(html)
                 .done();
         }
         catch (const std::out_of_range& oor) {
@@ -103,6 +154,7 @@ int main() {
         }
         catch(std::exception const & ex) {
             std::cout << ex.what() << std::endl;
+            req->create_response( restinio::status_internal_server_error() ).done();
         }
         catch(...) {
             std::cout << "ERR" << std::endl;
