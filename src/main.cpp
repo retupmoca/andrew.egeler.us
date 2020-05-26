@@ -2,9 +2,11 @@
 #include <string_view>
 #include <memory>
 #include <map>
+#include <thread>
 
 #include <restinio/all.hpp>
 #include <ctemplate/template.h>
+#include <sys/inotify.h>
 
 #include "static.hpp"
 #include "blog.hpp"
@@ -12,17 +14,53 @@
 using router_t = restinio::router::express_router_t<>;
 using std::string;
 
+// call cb once for every event
+void watchFolderAsync(std::function<void(void)> cb) {
+    auto thread = std::make_unique<std::thread>([cb]() {
+        int fd = inotify_init();
+        if (fd < 0) return;
+        int wd = inotify_add_watch(fd, "post/",
+            IN_CREATE | IN_MODIFY | IN_MOVED_TO | IN_CLOSE_WRITE
+        );
+        if (wd < 0) return;
+        size_t bsize = sizeof(struct inotify_event);
+        while(1) {
+            char buf[bsize];
+            int len = read(fd, buf, bsize);
+            if (len < 0)
+                break;
+            cb();
+        }
+    });
+    thread->detach();
+}
+
 int main() {
     ctemplate::StringToTemplateCache("layout.html", template_layout, template_layout_size, ctemplate::DO_NOT_STRIP);
     ctemplate::StringToTemplateCache("index.html", template_index, template_index_size, ctemplate::DO_NOT_STRIP);
 
-    blog::PostMap posts = blog::makePosts("post/*.md");
-    string home_redirect = "/post/" + posts.rbegin()->first;
+    bool needUpdate = true;
+    watchFolderAsync([&needUpdate](){
+        needUpdate = true;
+    });
+    blog::PostMap posts;
+    string home_redirect;
+    auto maybeReloadPosts = [&needUpdate, &posts, &home_redirect]() {
+        if(needUpdate) {
+            std::cout << "Reloading\n";
+            needUpdate = false;
+            posts = blog::makePosts("post/*.md");
+            if (!posts.size())
+                throw "No posts!";
+            home_redirect = "/post/" + posts.rbegin()->first;
+        }
+    };
 
     auto router = std::make_unique<router_t>();
 
-    router->http_get("/post/:pid", [&posts](auto req, auto params){
+    router->http_get("/post/:pid", [&posts, &maybeReloadPosts](auto req, auto params){
         try {
+            maybeReloadPosts();
             auto name = restinio::cast_to<std::string>(params["pid"]);
             auto html = posts.at(name);
 
@@ -63,8 +101,9 @@ int main() {
         return restinio::request_accepted();
     });
 
-    router->http_get("/", [&home_redirect](auto req, [[maybe_unused]] auto params){
+    router->http_get("/", [&home_redirect, &maybeReloadPosts](auto req, [[maybe_unused]] auto params){
         try {
+            maybeReloadPosts();
             req->create_response(restinio::status_found())
                 .append_header(restinio::http_field::location, home_redirect)
                 .done();
