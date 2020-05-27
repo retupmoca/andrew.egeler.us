@@ -32,9 +32,10 @@ body {
 }
 .body {
     width: 100%;
+    padding-bottom: 1rem;
 }
 .navlink {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
 }
 .navlink > * {
     margin: 0 0.2rem;
@@ -45,13 +46,16 @@ body {
 }
 
 .body ul {
-    padding-left: 15px;
+    padding-left: 1.5rem;
+}
+.body ol {
+    padding-left: 1.5rem;
 }
 .body pre {
     font-family: monospace;
-    margin-top: 12px;
-    padding: 12px;
-    border-radius: 8px;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
     background-color: #082d63;
     color: #cdd7e7;
 }
@@ -59,7 +63,7 @@ body {
     font-family: monospace;
 }
 .body  p {
-    margin-top: 8px;
+    margin-top: 0.6rem;
 }
 
 .footer {
