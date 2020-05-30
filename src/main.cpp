@@ -97,6 +97,21 @@ int main() {
         return restinio::request_accepted();
     });
 
+    router->http_get("/rss.xml", [&rendered, &maybeReloadPosts](auto req, [[maybe_unused]] auto params){
+        try {
+            maybeReloadPosts();
+            req->create_response()
+                .append_header(restinio::http_field::content_type, "application/rss+xml")
+                .set_body(rendered.rss)
+                .done();
+        }
+        catch(...) {
+            std::cout << "ERR" << std::endl;
+            req->create_response( restinio::status_internal_server_error() ).done();
+        }
+        return restinio::request_accepted();
+    });
+
     router->http_get("/", [&rendered, &maybeReloadPosts](auto req, [[maybe_unused]] auto params){
         try {
             maybeReloadPosts();
