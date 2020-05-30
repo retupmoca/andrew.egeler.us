@@ -23,10 +23,10 @@ void watchFolderAsync(std::function<void(void)> cb) {
             IN_CREATE | IN_MODIFY | IN_MOVED_TO | IN_CLOSE_WRITE
         );
         if(wd < 0) return;
-        size_t bsize = 512 + sizeof(struct inotify_event);
+        constexpr size_t bsize = 512 + sizeof(struct inotify_event);
+        char buf[bsize];
         while(1) {
-            char buf[bsize];
-            int len = read(fd, buf, bsize);
+            long len = read(fd, buf, bsize);
             if (len < 0)
                 break;
             cb();
