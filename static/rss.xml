@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+ <title>Andrew Egeler's Blog</title>
+ <link>https://andrew.egeler.us/</link>
+
+ {{#POST}}
+ <item>
+  <title>{{title}}</title>
+  <description>{{description}}</description>
+  <link>https://andrew.egeler.us/post/{{name}}</link>
+ </item>
+ {{/POST}}
+
+</channel>
+</rss>

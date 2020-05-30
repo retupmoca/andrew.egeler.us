@@ -1,16 +1,16 @@
     .section .rodata
 
-    .global template_layout
-    .type   template_layout, @object
+    .global template_rss
+    .type   template_rss, @object
     .align  4
-template_layout:
-    .incbin "static/layout.html"
-template_layout_end:
-    .global template_layout_size
-    .type   tempalte_layout_size, @object
+template_rss:
+    .incbin "static/rss.xml"
+template_rss_end:
+    .global template_rss_size
+    .type   tempalte_rss_size, @object
     .align  4
-template_layout_size:
-    .int    template_layout_end - template_layout
+template_rss_size:
+    .int    template_rss_end - template_rss
 
     .global template_index
     .type   template_index, @object

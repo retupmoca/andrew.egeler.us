@@ -36,33 +36,29 @@ void watchFolderAsync(std::function<void(void)> cb) {
 }
 
 int main() {
-    ctemplate::StringToTemplateCache("layout.html", template_layout, template_layout_size, ctemplate::DO_NOT_STRIP);
+    ctemplate::StringToTemplateCache("rss.xml", template_rss, template_rss_size, ctemplate::DO_NOT_STRIP);
     ctemplate::StringToTemplateCache("index.html", template_index, template_index_size, ctemplate::DO_NOT_STRIP);
 
     bool needUpdate = true;
     watchFolderAsync([&needUpdate](){
         needUpdate = true;
     });
-    blog::PostMap posts;
-    string home_redirect;
-    auto maybeReloadPosts = [&needUpdate, &posts, &home_redirect]() {
+    blog::PostData rendered;
+    auto maybeReloadPosts = [&needUpdate, &rendered]() {
         if(needUpdate) {
             std::cout << "Reloading\n";
             needUpdate = false;
-            posts = blog::makePosts("post/*.md");
-            if (!posts.size())
-                throw "No posts!";
-            home_redirect = "/post/" + posts.rbegin()->first;
+            rendered = blog::makePosts("post/*.md");
         }
     };
 
     auto router = std::make_unique<router_t>();
 
-    router->http_get("/post/:pid", [&posts, &maybeReloadPosts](auto req, auto params){
+    router->http_get("/post/:pid", [&rendered, &maybeReloadPosts](auto req, auto params){
         try {
             maybeReloadPosts();
             auto name = restinio::cast_to<std::string>(params["pid"]);
-            auto html = posts.at(name);
+            auto html = rendered.posts.at(name);
 
             req->create_response()
                 .append_header(restinio::http_field::content_type, "text/html")
@@ -101,11 +97,11 @@ int main() {
         return restinio::request_accepted();
     });
 
-    router->http_get("/", [&home_redirect, &maybeReloadPosts](auto req, [[maybe_unused]] auto params){
+    router->http_get("/", [&rendered, &maybeReloadPosts](auto req, [[maybe_unused]] auto params){
         try {
             maybeReloadPosts();
             req->create_response(restinio::status_found())
-                .append_header(restinio::http_field::location, home_redirect)
+                .append_header(restinio::http_field::location, "/post/" + rendered.newestPostName)
                 .done();
         }
         catch (const std::out_of_range& oor) {

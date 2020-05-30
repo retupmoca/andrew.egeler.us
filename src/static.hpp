@@ -1,8 +1,8 @@
 #pragma once
 
 extern "C" {
-    extern char const template_layout[];
-    extern unsigned const template_layout_size;
+    extern char const template_rss[];
+    extern unsigned const template_rss_size;
 
     extern char const template_index[];
     extern unsigned const template_index_size;

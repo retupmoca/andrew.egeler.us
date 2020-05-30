@@ -40,7 +40,7 @@ namespace blog {
 
     // TODO: probably want to make this an object to support runtime-updating
     //       of blog post list
-    auto makePosts(string basePath) -> PostMap {
+    auto makePosts(string basePath) -> PostData {
         //TODO: I want c++20 ranges for this
 
         // glob the files
@@ -90,6 +90,6 @@ namespace blog {
         PostMap posts;
         for(auto &p : postRendered)
             posts[p.name] = p.html;
-        return posts;
+        return {.posts=posts, .newestPostName=postFiles.back().name, .rss=std::string("")};
     }
 }
