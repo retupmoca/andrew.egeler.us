@@ -60,7 +60,40 @@ namespace blog {
             }
         );
 
-        // TODO: generate RSS data from markdown text
+        // generate RSS data from markdown text
+        // note: this is a for loop because by spec we can't rely on
+        //       std::transform going in-order
+        std::string rss;
+        {
+            ctemplate::TemplateDictionary dict("");
+            for(auto &post : postMarkdown) {
+                // TODO: ew, manual parsing. This should either be hidden, or
+                //       should use cmark to do the parsing
+                auto postDict = dict.AddSectionDictionary("POST");
+                postDict->SetValue("name", post.name);
+
+                // assume that line 1 is a markdown heading
+                unsigned titleEnd = 0;
+                char const * p = post.markdown.c_str();
+                for(; p[titleEnd] && p[titleEnd] != '\n'; titleEnd++)
+                    ;
+                if(titleEnd < 2 || !p[titleEnd] || p[titleEnd+1] != '\n')
+                    continue;
+                std::string title = post.markdown.substr(2, titleEnd-2);
+                postDict->SetValue("title", title);
+
+                // assume that the paragraph after the title is a TL;DR:
+                unsigned tldrEnd = 0;
+                p = p + titleEnd + 2;
+                for(; p[tldrEnd] && !(p[tldrEnd] == '\n' && p[tldrEnd + 1] == '\n'); tldrEnd++)
+                    ;
+                std::string description;
+                if(p[tldrEnd])
+                    description = post.markdown.substr(titleEnd+2, tldrEnd);
+                postDict->SetValue("description", description);
+            }
+            ctemplate::ExpandTemplate("rss.xml", ctemplate::DO_NOT_STRIP, &dict, &rss);
+        }
 
         // dump it into HTML templates
         struct PostRendered {
@@ -90,6 +123,6 @@ namespace blog {
         PostMap posts;
         for(auto &p : postRendered)
             posts[p.name] = p.html;
-        return {.posts=posts, .newestPostName=postFiles.back().name, .rss=std::string("")};
+        return {.posts=posts, .newestPostName=postRendered.back().name, .rss=rss};
     }
 }
